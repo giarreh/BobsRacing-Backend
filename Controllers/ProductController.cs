@@ -8,16 +8,18 @@ namespace Bobs_Racing.Controllers
 
     public class ProductController : ControllerBase
     {
-        private static List<Product> products = new List<Product>
+        private readonly IProductRepository _repository;
+
+        public ProductController(IProductRepository repository)
         {
-            new Product { Id = 1, Name = "Bike", Price = 10.1m, Description = "To ride" },
-            new Product { Id = 2, Name = "cake", Price = 2.2m, Description = "To eat" }
-        };
+            _repository = repository;
+        }
 
         //get: /product
         [HttpGet]
         public IActionResult GetProducts()
         {
+            var products = _repository.GetAll();
             return Ok(products);
         }
 
@@ -25,7 +27,7 @@ namespace Bobs_Racing.Controllers
         [HttpGet("{id}")]
         public IActionResult GetProductById(int id)
         {
-            var product = products.FirstOrDefault(p => p.Id == id);
+            var product = _repository.GetById(id);
             if (product == null)
             {
                 return NotFound("id not found");
@@ -37,9 +39,35 @@ namespace Bobs_Racing.Controllers
         [HttpPost]
         public IActionResult CreateProduct([FromBody] Product newProduct)
         {
-            newProduct.Id = products.Max(p => p.Id) + 1;
-            products.Add(newProduct);
+            _repository.Add(newProduct);
             return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, newProduct);
+        }
+
+        [HttpPut("{id}")]
+        public IActionResult UpdateProduct(int id, [FromBody] Product updatedProduct)
+        {
+            var existingProduct = _repository.GetById(id);
+            if (existingProduct == null)
+            {
+                return NotFound($"Product with Id = {id} not found.");
+            }
+
+            updatedProduct.Id = id; // Ensure the ID matches
+            _repository.Update(updatedProduct);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public IActionResult DeleteProduct(int id)
+        {
+            var existingProduct = _repository.GetById(id);
+            if (existingProduct == null)
+            {
+                return NotFound($"Product with Id = {id} not found.");
+            }
+
+            _repository.Delete(id);
+            return NoContent();
         }
     }
 }
